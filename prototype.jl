@@ -171,6 +171,8 @@ function SolveEPP(time_limit::Int64)
 
     #lagerkosten 20-750 $ per kg H2
     c_H_storage = 50
+    c_h2charge  = 1      # €/kWh cost of charging
+    c_h2discharge = 0.5  # €/kWh cost of charging
 
     H_heizwert = 1/3; # kg/kwh //  33.33 kwh/kg
     
@@ -185,8 +187,8 @@ function SolveEPP(time_limit::Int64)
     ### Decision Variables ###
     #######################     
     # variable für "wenn storage[p] < max dann EC möglich ,  storage > 0 dann FC möglich"     
-    @variable(EPP, z_EC[1:P], Bin)  
-    @variable(EPP, z_FC[1:P], Bin)  
+    # @variable(EPP, inv_η_toH2[1:P] >= 0)
+    # @variable(EPP, inv_η_fromH2[1:P] >= 0) 
 
     @variable(EPP, E_toH2[1:P] >= 0)
     @variable(EPP, E_fromH2[1:P] >= 0)
@@ -210,12 +212,14 @@ function SolveEPP(time_limit::Int64)
     @constraint(EPP, [p=1:P], E_toH2[p] <= H_Max_charge_rate)
     @constraint(EPP, [p=1:P], E_fromH2[p] <= H_Max_discharge_rate)
 
+    # @constraint(EPP, [p=1:P], inv_η_toH2[p] * η_toH2[p] == 1)
+    # @constraint(EPP, [p=1:P], inv_η_fromH2[p] * η_fromH2[p] == 1)
 
     # SOS2 Constraints für Elektrolyse
     @variable(EPP, active_1[1:P], Bin)
     @constraint(EPP, [p=1:P], 
         E_toH2[p] == sum(λ_toH2[p,i] * leistung_punkte[i] for i in eachindex(leistung_punkte)) * active_1[p])
-    @constraint(EPP, [p=1:P], active_1[p] <= 1.9999 * (H_storage[p] / H_max) )  # Aktivieren nur wenn H_storage < H_max
+    @constraint(EPP, [p=1:P], active_1[p] <= 1.999 - (H_storage[p] / H_max) )  # Aktivieren nur wenn H_storage < H_max
     # @constraint(EPP, [p=1:P], 
     #     E_toH2[p] == sum(λ_toH2[p,i] * leistung_punkte[i] for i in eachindex(leistung_punkte)))
     @constraint(EPP, [p=1:P], 
@@ -270,12 +274,25 @@ function SolveEPP(time_limit::Int64)
     #######################
     ### Objective Function ###
     #######################
+    function safe_inverse(x)
+        return x == 0 ? 1000.0 : 1/x  
+    end
+    
+    wirkungsgrad_punkte_toH2_inv = [safe_inverse(x) for x in wirkungsgrad_punkte_toH2]
+    wirkungsgrad_punkte_fromH2_inv = [safe_inverse(x) for x in wirkungsgrad_punkte_fromH2]
+
+    @variable(EPP, inv_η_toH2[1:P] >= 0)
+    @variable(EPP, inv_η_fromH2[1:P] >= 0)
+
+    @constraint(EPP, [p=1:P], inv_η_toH2[p] == sum(λ_toH2[p,i] * wirkungsgrad_punkte_toH2_inv[i] for i in eachindex(leistung_punkte)))
+    @constraint(EPP, [p=1:P], inv_η_fromH2[p] == sum(λ_fromH2[p,i] * wirkungsgrad_punkte_fromH2_inv[i] for i in eachindex(leistung_punkte)))
+
     @objective(EPP, Min, 
-        sum(c_buy[p]*E_buy[p] - c_sell[p]*E_sell[p] for p=1:P) +  # original energy costs
-        sum(c_charge*E_charge[p] + c_discharge*E_discharge[p] for p=1:P) +  # battery operation costs
-        #sum(s_h2charge * E_toH2[p] + c_h2discharge * E_fromH2[p] for p=1:P)
-        sum(c_hBuy[p] * H_buy[p] - c_hSell[p] * H_sell[p] for p=1:P) +  # hydrogen trading costs
-        sum(c_H_storage * H_storage[p] for p=1:P)  # Fuelcell storage costs
+        sum(c_buy[p]*E_buy[p] - c_sell[p]*E_sell[p] for p=1:P) +  
+        sum(c_charge*E_charge[p] + c_discharge*E_discharge[p] for p=1:P) +  
+        sum(c_h2charge * inv_η_toH2[p] * E_toH2[p] + c_h2discharge * inv_η_fromH2[p] * E_fromH2[p] for p=1:P) +
+        sum(c_hBuy[p] * H_buy[p] - c_hSell[p] * H_sell[p] for p=1:P) +  
+        sum(c_H_storage * H_storage[p] for p=1:P)  
     )
 
     #######################
@@ -574,7 +591,7 @@ end
 
 # wenn man die datai ausführt soll main ausgeführt werden
 if abspath(PROGRAM_FILE) == @__FILE__
-    main("Test7", "keinInitialStorage")
+    main("Test7", "neueChargeDischargeKostn")
 end
 
 #main("MyDirectory", "MyTest"); # Uncomment and modify to run with custom names

@@ -16,6 +16,9 @@ println(c_sell)
 
 length(x)
 
+1 * 1/0.6 
+
+
 rounded_c_hBuy = round.(c_hBuy)
 rounded_c_hSell = round.(c_hSell)
 
