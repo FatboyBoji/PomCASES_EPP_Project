@@ -1,0 +1,18 @@
+#########################################################################################
+OPTIMIZATION RESULTS:
+Timestamp: 2025-01-23T23:26:58.894
+Objective value: 3987.164923807105
+Solve time: 360.0240001678467 seconds
+Relative gap: 0.04860212569684747
+
+EFFICIENCY METRICS:
+Average H2 production efficiency: 0.41249999999999987
+Average H2 usage efficiency: 0.27013893825032276
+
+TOTALS:
+Total E_toH2: 0.0
+Total E_fromH2: 329.4095221322541
+Total H_storage: 61.25362228598064
+Total H_sell: 1.0
+Total H_buy: 45.95606592465254
+#########################################################################################
