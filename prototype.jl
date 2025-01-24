@@ -160,18 +160,16 @@ function SolveEPP(time_limit::Int64)
     ############################################
     H_max = 1000;                # kg H2 Speicherkapazität
     H_storage_initial = 0;       # kg H2 Anfangsbestand
-    H_storage_end = 50;          # kg H2 Endbestand     
-    H_Max_charge_rate = 300;     # kW max Elektrolyse-Leistung    
-    H_Max_discharge_rate = 30;  # kW max Brennstoffzellen-Leistung
-
-    # produktions rate
+    H_storage_end = 0;           # kg H2 Endbestand     
+    H_Max_charge_rate = 100;     # kW max Elektrolyse-Leistung    
+    H_Max_discharge_rate = 100;  # kW max Brennstoffzellen-Leistung
 
 
     #euro/kg wasserstoffpreise
-    c_hBuy = [6.0, 8.0, 7.0, 7.0, 7.0, 5.0, 7.0, 8.0, 5.0, 5.0, 7.0, 6.0, 4.0, 6.0, 4.0, 5.0, 6.0, 6.0, 4.0, 7.0, 5.0, 7.0, 5.0, 6.0]
-    c_hSell = [3.0, 5.0, 4.0, 4.0, 4.0, 3.0, 4.0, 5.0, 3.0, 3.0, 4.0, 4.0, 2.0, 4.0, 3.0, 3.0, 3.0, 4.0, 2.0, 4.0, 3.0, 4.0, 3.0, 3.0]
+    c_hBuy = [2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5]
+    c_hSell = [2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5]
 
-    #lagerkosten 20-750 $
+    #lagerkosten 20-750 $ per kg H2
     c_H_storage = 50
 
     H_heizwert = 1/3; # kg/kwh //  33.33 kwh/kg
@@ -179,9 +177,9 @@ function SolveEPP(time_limit::Int64)
     # a_toH2 = 0.63
     # a_fromH2 = 0.48
     
-    leistung_punkte              = [0,   20,   30,   40,   50, 100, 120,  160, 200]     # kW (Leistung)
-    wirkungsgrad_punkte_toH2     = [0, 0.75, 0.78, 0.72, 0.65, 0.6, 0.6, 0.55, 0.5]   # toH2
-    wirkungsgrad_punkte_fromH2   = [0,  0.1,  0.1,  0.1,  0.1, 0.1, 0.5,  0.1, 0.1]   # fromH2
+    leistung_punkte              = [0,   10,    20,    30,    40,    50,   60,    70,   80,  90,  100]   # kW (Leistung)
+    wirkungsgrad_punkte_toH2     = [0, 0.75,  0.78,  0.72,  0.65,  0.65,  0.6,   0.6, 0.55, 0.5,  0.5]   # toH2
+    wirkungsgrad_punkte_fromH2   = [0,  0.6,  0.58,  0.55,  0.52,  0.50, 0.48,  0.45, 0.43, 0.4,  0.3]   # fromH2
 
     #######################
     ### Decision Variables ###
@@ -217,7 +215,7 @@ function SolveEPP(time_limit::Int64)
     @variable(EPP, active_1[1:P], Bin)
     @constraint(EPP, [p=1:P], 
         E_toH2[p] == sum(λ_toH2[p,i] * leistung_punkte[i] for i in eachindex(leistung_punkte)) * active_1[p])
-    @constraint(EPP, [p=1:P], active_1[p] <= H_storage[p] / H_max)  # Aktivieren nur wenn H_storage < H_max
+    @constraint(EPP, [p=1:P], active_1[p] <= 1.9999 * (H_storage[p] / H_max) )  # Aktivieren nur wenn H_storage < H_max
     # @constraint(EPP, [p=1:P], 
     #     E_toH2[p] == sum(λ_toH2[p,i] * leistung_punkte[i] for i in eachindex(leistung_punkte)))
     @constraint(EPP, [p=1:P], 
@@ -575,7 +573,7 @@ end
 
 # wenn man die datai ausführt soll main ausgeführt werden
 if abspath(PROGRAM_FILE) == @__FILE__
-    main("Test6", "discharge_weniger")
+    main("Test7", "keinInitialStorage")
 end
 
 #main("MyDirectory", "MyTest"); # Uncomment and modify to run with custom names
