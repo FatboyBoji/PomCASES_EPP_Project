@@ -50,8 +50,8 @@ function SolveEPP(time_limit::Int64)
     c_PL = 200;
 
     # Energy prices per period
-    c_buy = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1];
-    c_sell = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 3.0, 3.0, 4.0, 4.0, 2.0, 4.0, 3.0, 3.0, 3.0, 4.0, 2.0, 4.0, 3.0, 4.0, 3.0, 3.0];
+    c_buy = [1, 1, 1, 1, 2, 2, 3, 4, 5, 5, 1, 4, 3, 3, 1, 1, 1, 1, 4, 3, 3, 1, 1, 1];
+    c_sell = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1];
 
     # Renewable generation per period
     re = [0, 0, 0, 20, 30, 40, 40, 50, 70, 80, 90, 80, 100, 70, 70, 60, 50, 30, 30, 10, 10, 0, 0, 0];
@@ -159,7 +159,7 @@ function SolveEPP(time_limit::Int64)
     ### Hydrogen fuel cell 
     ############################################
     H_max = 1000;                # kg H2 Speicherkapazität
-    H_storage_initial = 20;       # kg H2 Anfangsbestand
+    H_storage_initial = 0;       # kg H2 Anfangsbestand
     H_storage_end = 50;          # kg H2 Endbestand     
     H_Max_charge_rate = 300;     # kW max Elektrolyse-Leistung    
     H_Max_discharge_rate = 30;  # kW max Brennstoffzellen-Leistung
@@ -217,8 +217,7 @@ function SolveEPP(time_limit::Int64)
     @variable(EPP, active_1[1:P], Bin)
     @constraint(EPP, [p=1:P], 
         E_toH2[p] == sum(λ_toH2[p,i] * leistung_punkte[i] for i in eachindex(leistung_punkte)) * active_1[p])
-    @constraint(EPP, [p=1:P], active_1[p] <= 1.99 - (H_storage[p]/H_max))  # Aktivieren nur wenn H_storage < H_max
-
+    @constraint(EPP, [p=1:P], active_1[p] <= H_storage[p] / H_max)  # Aktivieren nur wenn H_storage < H_max
     # @constraint(EPP, [p=1:P], 
     #     E_toH2[p] == sum(λ_toH2[p,i] * leistung_punkte[i] for i in eachindex(leistung_punkte)))
     @constraint(EPP, [p=1:P], 
@@ -576,7 +575,7 @@ end
 
 # wenn man die datai ausführt soll main ausgeführt werden
 if abspath(PROGRAM_FILE) == @__FILE__
-    main("Test8", "ec_test")
+    main("Test6", "discharge_weniger")
 end
 
 #main("MyDirectory", "MyTest"); # Uncomment and modify to run with custom names
