@@ -158,32 +158,37 @@ function SolveEPP(time_limit::Int64)
     ############################################
     ### Hydrogen fuel cell 
     ############################################
-    H_max = 1000;                # kg H2 Speicherkapazität
+    H_max = 1000;                # kg H2 Speicherkapazität -> ~33333 kWh
     H_storage_initial = 0;       # kg H2 Anfangsbestand
     H_storage_end = 0;           # kg H2 Endbestand     
     H_Max_charge_rate = 100;     # kW max Elektrolyse-Leistung    
     H_Max_discharge_rate = 100;  # kW max Brennstoffzellen-Leistung
+    max_H_purchases = 1;         # Maximum number of H2 purchases allowed in one day
+    min_H_purchase_amount = 100; # Minimum amount of H2 that must be purchased when making a purchase (kg)
 
 
     #euro/kg wasserstoffpreise
-    c_hBuy = [2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5]
-    c_hSell = [2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5]
+    c_hBuy  = [7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0]
+    c_hSell = [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]
 
     #lagerkosten 20-750 $ per kg H2
     c_H_storage = 5
 
-    #kosten für die umwandlung
-    c_h2charge  = 0.15      # €/kWh cost of charging
-    c_h2discharge = 0.15    # €/kWh cost of charging
+    c_h2charge  = 0.1      # €/kWh cost of charging
+    c_h2discharge = 0.1    # €/kWh cost of charging
 
     H_heizwert = 1/3; # kg/kwh //  33.33 kwh/kg
     
-    # a_toH2 = 0.63
-    # a_fromH2 = 0.48
     
     leistung_punkte              = [0,   10,    20,    30,    40,    50,   60,    70,   80,  90,  100]   # kW (Leistung)
     wirkungsgrad_punkte_toH2     = [0, 0.75,  0.78,  0.72,  0.65,  0.65,  0.6,   0.6, 0.55, 0.5,  0.5]   # toH2
     wirkungsgrad_punkte_fromH2   = [0,  0.6,  0.58,  0.55,  0.52,  0.50, 0.48,  0.45, 0.43, 0.4,  0.3]   # fromH2
+
+    function safe_inverse(x)
+        return x == 0 ? 1000.0 : 1/x  
+    end
+    wirkungsgrad_punkte_toH2_inv = [safe_inverse(x) for x in wirkungsgrad_punkte_toH2]
+    wirkungsgrad_punkte_fromH2_inv = [safe_inverse(x) for x in wirkungsgrad_punkte_fromH2]
 
     #######################
     ### Decision Variables ###
@@ -194,6 +199,7 @@ function SolveEPP(time_limit::Int64)
     @variable(EPP, H_storage[1:P] >= 0)
     @variable(EPP, H_buy[1:P] >= 0)   #kg
     @variable(EPP, H_sell[1:P] >= 0)  #kg
+    @variable(EPP, z_buy[1:P], Bin)   #if H2 is purchased in period p, 0 otherwise
     
     # SOS2 Variablen
     @variable(EPP, λ_toH2[1:P, 1:length(leistung_punkte)] >= 0)
@@ -216,77 +222,56 @@ function SolveEPP(time_limit::Int64)
     @constraint(EPP, [p=1:P], E_toH2[p] <= H_Max_charge_rate)
     @constraint(EPP, [p=1:P], E_fromH2[p] <= H_Max_discharge_rate)
 
-    # @constraint(EPP, [p=1:P], inv_η_toH2[p] * η_toH2[p] == 1)
-    # @constraint(EPP, [p=1:P], inv_η_fromH2[p] * η_fromH2[p] == 1)
-
+    ## wenn storage[p] < max dann EC möglich ,  storage > 0 dann FC möglich
     # SOS2 Constraints für Elektrolyse
-    @constraint(EPP, [p=1:P], 
-        E_toH2[p] == sum(λ_toH2[p,i] * leistung_punkte[i] for i in eachindex(leistung_punkte)) * active_1[p])
+    @constraint(EPP, [p=1:P], E_toH2[p] == sum(λ_toH2[p,i] * leistung_punkte[i] for i in eachindex(leistung_punkte)) * active_1[p])
     @constraint(EPP, [p=1:P], active_1[p] <= 1.999 - (H_storage[p] / H_max) )  # Aktivieren nur wenn H_storage < H_max
-    # @constraint(EPP, [p=1:P], 
-    #     E_toH2[p] == sum(λ_toH2[p,i] * leistung_punkte[i] for i in eachindex(leistung_punkte)))
-    @constraint(EPP, [p=1:P], 
-        η_toH2[p] == sum(λ_toH2[p,i] * wirkungsgrad_punkte_toH2[i] for i in eachindex(leistung_punkte)))
-    @constraint(EPP, [p=1:P], 
-        sum(λ_toH2[p,i] for i in eachindex(leistung_punkte)) == 1)
+    @constraint(EPP, [p=1:P], η_toH2[p] == sum(λ_toH2[p,i] * wirkungsgrad_punkte_toH2[i] for i in eachindex(leistung_punkte)))
+    @constraint(EPP, [p=1:P], sum(λ_toH2[p,i] for i in eachindex(leistung_punkte)) == 1)
     @constraint(EPP, [p=1:P], λ_toH2[p,:] in SOS2())
 
     # SOS2 Constraints für Brennstoffzelle
     @constraint(EPP, [p=1:P], E_fromH2[p] == sum(λ_fromH2[p,i] * leistung_punkte[i] for i in eachindex(leistung_punkte)) * active_2[p])
     @constraint(EPP, [p=1:P], active_2[p] <= H_storage[p])  # Aktivieren nur wenn H_storage > 0
-    # @constraint(EPP, [p=1:P], 
-    #     E_fromH2[p] == sum(λ_fromH2[p,i] * leistung_punkte[i] for i in eachindex(leistung_punkte)))
-    @constraint(EPP, [p=1:P], 
-        η_fromH2[p] == sum(λ_fromH2[p,i] * wirkungsgrad_punkte_fromH2[i] for i in eachindex(leistung_punkte)))
+    @constraint(EPP, [p=1:P], η_fromH2[p] == sum(λ_fromH2[p,i] * wirkungsgrad_punkte_fromH2[i] for i in eachindex(leistung_punkte)))
     @constraint(EPP, [p=1:P], sum(λ_fromH2[p,i] for i in eachindex(leistung_punkte)) == 1)
     @constraint(EPP, [p=1:P], λ_fromH2[p,:] in SOS2())
 
     # Umrechnung Energie zu H2-Menge
-    @constraint(EPP, [p=1:P], 
-        EC_menge[p] == E_toH2[p] * η_toH2[p] * H_heizwert)  # kwh * % * kg/kwh = kg
-    @constraint(EPP, [p=1:P], 
-        FC_menge[p] == E_fromH2[p] * η_fromH2[p] * H_heizwert) 
-
-    ## wenn storage[p] < max dann EC möglich ,  storage > 0 dann FC möglich
+    @constraint(EPP, [p=1:P], EC_menge[p] == E_toH2[p] * η_toH2[p] * H_heizwert)  # kwh * % * kg/kwh = kg
+    @constraint(EPP, [p=1:P], FC_menge[p] == E_fromH2[p] * η_fromH2[p] * H_heizwert) 
 
     # Speicherstandsbilanz
     # first period
-    @constraint(EPP, [p=1:1], 
-        H_storage[p] == H_storage_initial + EC_menge[p] - FC_menge[p] + H_buy[p] - H_sell[p])
-    
+    @constraint(EPP, [p=1:1], H_storage[p] == H_storage_initial + EC_menge[p] - FC_menge[p] + H_buy[p] - H_sell[p])
     # other periods
-    @constraint(EPP, [p=2:P],
-        H_storage[p] == H_storage[p-1] + EC_menge[p] - FC_menge[p] + H_buy[p] - H_sell[p])
-    
+    @constraint(EPP, [p=2:P], H_storage[p] == H_storage[p-1] + EC_menge[p] - FC_menge[p] + H_buy[p] - H_sell[p])
     # last period
-    @constraint(EPP, [p=P:P], 
-        H_storage_end == H_storage[p-1] + EC_menge[p] - FC_menge[p] + H_buy[p] - H_sell[p])
+    @constraint(EPP, [p=P:P], H_storage_end == H_storage[p-1] + EC_menge[p] - FC_menge[p] + H_buy[p] - H_sell[p])
 
     # eine bedingung damit EC und FC nicht gleichzeitig laufen
     @constraint(EPP, [p=1:P], E_toH2[p] * E_fromH2[p] == 0)
-
-
-    ### kosten timer preis beim umschalten von EC zu FC
 
     # Energiebilanz
     @constraint(EPP, [p=1:P], 
         sum(alpha[m,p,s]*e[m,s] for m=1:M, s=1:S) + E_sell[p] + E_charge[p] + E_toH2[p] == 
         E_buy[p] + re[p] + E_discharge[p] + E_fromH2[p])
 
+    @constraint(EPP, [p=1:P], inv_η_toH2[p] == sum(λ_toH2[p,i] * wirkungsgrad_punkte_toH2_inv[i] for i in eachindex(leistung_punkte)))
+    @constraint(EPP, [p=1:P], inv_η_fromH2[p] == sum(λ_fromH2[p,i] * wirkungsgrad_punkte_fromH2_inv[i] for i in eachindex(leistung_punkte)))
+    
+    # Constraints for H2 purchase limitation
+    # If z_buy[p] = 0, no purchase allowed in period p
+    @constraint(EPP, [p=1:P], H_buy[p] <= H_max * z_buy[p]) 
+    # If z_buy[p] = 1, purchase must be at least min_amount
+    @constraint(EPP, [p=1:P], H_buy[p] >= min_H_purchase_amount * z_buy[p])  
+    
+    # Limit total number of purchases
+    @constraint(EPP, sum(z_buy[p] for p=1:P) <= max_H_purchases)
+
     #######################
     ### Objective Function ###
     #######################
-    function safe_inverse(x)
-        return x == 0 ? 1000.0 : 1/x  
-    end
-    
-    wirkungsgrad_punkte_toH2_inv = [safe_inverse(x) for x in wirkungsgrad_punkte_toH2]
-    wirkungsgrad_punkte_fromH2_inv = [safe_inverse(x) for x in wirkungsgrad_punkte_fromH2]
-
-
-    @constraint(EPP, [p=1:P], inv_η_toH2[p] == sum(λ_toH2[p,i] * wirkungsgrad_punkte_toH2_inv[i] for i in eachindex(leistung_punkte)))
-    @constraint(EPP, [p=1:P], inv_η_fromH2[p] == sum(λ_fromH2[p,i] * wirkungsgrad_punkte_fromH2_inv[i] for i in eachindex(leistung_punkte)))
-
     @objective(EPP, Min, 
         sum(c_buy[p]*E_buy[p] - c_sell[p]*E_sell[p] for p=1:P) +  
         sum(c_charge*E_charge[p] + c_discharge*E_discharge[p] for p=1:P) +  
@@ -317,15 +302,14 @@ function SolveEPP(time_limit::Int64)
            JuMP.value.(H_storage),
            JuMP.value.(η_toH2),
            JuMP.value.(η_fromH2),
-           re,  # Return renewable energy data
-           ED,  # Return energy demand
-           e,   # Return energy demand matrix
-           c_hBuy,  # Return H2 buy prices
-           c_hSell; # Return H2 sell prices
+           re,  
+           ED,  
+           e,  
+           c_hBuy,  
+           c_hSell; 
 end
 
 
-# Refactor plotting function to use named parameters
 function PlotResults(;alpha, X, E_toH2, E_fromH2, H_storage, E_charge, E_discharge, H_buy, H_sell, 
                     E_buy, E_sell, Periods, P=24, M=2, J=15, S=5, e=nothing, re=nothing,
                     c_hBuy=nothing, c_hSell=nothing)
@@ -351,7 +335,6 @@ function PlotResults(;alpha, X, E_toH2, E_fromH2, H_storage, E_charge, E_dischar
     annotate!((p, X[m,j,p]*m, text(string(j), :black, :10)));
     end
     
-    # Common plot parameters
     plot_height = 500
     left_margin = 30Plots.mm
 
@@ -383,7 +366,7 @@ function PlotResults(;alpha, X, E_toH2, E_fromH2, H_storage, E_charge, E_dischar
         tick_direction=:out)
 
     # Graph 2b: H2 System Energy Flows
-    y_h2 = [-E_toH2 E_fromH2]  # Made E_toH2 negative to show below zero
+    y_h2 = [-E_toH2 E_fromH2]  
     g2b = groupedbar(x, y_h2,
         label=["Elektrolyse" "Brennstoffzelle"],
         color=[:navy :skyblue],
@@ -461,7 +444,6 @@ function PlotResults(;alpha, X, E_toH2, E_fromH2, H_storage, E_charge, E_dischar
           legend_font_pointsize=8,
           label=["H₂ Speicherstand" "H₂ Kaufpreis" "H₂ Verkaufpreis" "H₂ Einkauf" "H₂ Verkauf"])
 
-    # Combine all plots
     plot(g1, g2a, g2b, g4, g3,
         layout=grid(5, 1), 
         size=(1200,2500),
@@ -478,10 +460,15 @@ end
 ####################
 
 function main(directory_name::String="Test1", file_prefix::String="default")
+    start_time = time() 
+    
     model, obj_val, solve_time, gap, E_toH2, E_fromH2, H_storage, η_toH2, η_fromH2, re, ED, e, c_hBuy, c_hSell = SolveEPP(360);
     
     H_sell = value.(model[:H_sell])
     H_buy = value.(model[:H_buy])
+    E_charge = value.(model[:E_charge])
+    E_discharge = value.(model[:E_discharge])
+    Bat_SoC = value.(model[:Bat_SoC])
     
     results = Dict(
         "timestamp" => Dates.now(),
@@ -534,7 +521,7 @@ function main(directory_name::String="Test1", file_prefix::String="default")
         println(io, "-"^150)  
         for p in 1:24
             @printf(io, "%-6d | %12.2f | %12.2f | %12.2f | %12.2f | %12.2f | %12.2f | %12.2f\n", 
-                   p, E_toH2[p], E_fromH2[p], H_storage[p], H_sell[p], H_buy[p], value(model[:E_charge][p]), value(model[:E_discharge][p]))
+                   p, E_toH2[p], E_fromH2[p], H_storage[p], H_sell[p], H_buy[p], E_charge[p], E_discharge[p])
         end
         println(io, "#"^150)  
         println(io, "\nSUMMARY STATISTICS:")
@@ -562,8 +549,8 @@ function main(directory_name::String="Test1", file_prefix::String="default")
         E_toH2=E_toH2,
         E_fromH2=E_fromH2,
         H_storage=H_storage,
-        E_charge=value.(model[:E_charge]),
-        E_discharge=value.(model[:E_discharge]),
+        E_charge=E_charge,
+        E_discharge=E_discharge,
         H_buy=H_buy,
         H_sell=H_sell,
         E_buy=value.(model[:E_buy]),
@@ -576,13 +563,20 @@ function main(directory_name::String="Test1", file_prefix::String="default")
         c_hSell=c_hSell
     );
     savefig(p, plot_file)
+    
+    total_time = time() - start_time 
     println("Results saved in $(results_dir)/ directory with timestamp $(timestamp)")
+    println("Ende")
+    println("#########################################################################################")
+    println("Total execution time: $(round(total_time, digits=2)) seconds")
     println()
 end
 
 # wenn man die datai ausführt soll main ausgeführt werden
 if abspath(PROGRAM_FILE) == @__FILE__
-    main("Test7", "neueChargeDischargeKostn")
+    main("Test10", "1Kauf_100kgMin")
 end
 
 #main("MyDirectory", "MyTest"); # Uncomment and modify to run with custom names
+
+# day1-
