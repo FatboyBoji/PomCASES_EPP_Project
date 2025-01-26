@@ -175,7 +175,11 @@ function SolveEPP(time_limit::Int64)
     #c_hSell = [3.0, 2.7, 2.4, 2.4, 2.7, 3.6, 4.5, 4.8, 4.5, 3.9, 3.6, 3.9, 4.2, 3.9, 3.6, 3.6, 3.9, 4.2, 4.8, 4.5, 3.9, 3.6, 3.3, 3.0]
 
     #lagerkosten 20-750 $ per kg H2
+<<<<<<< HEAD
     c_H_storage = 2.5 #5
+=======
+    c_H_storage = 1 #5
+>>>>>>> 58521e9445f4bed65738f1de8ca3cc1f71df6f9e
 
     c_h2charge  = 0.1      # €/kWh cost of charging
     c_h2discharge = 0.1    # €/kWh cost of charging
@@ -592,7 +596,12 @@ end
 
 # wenn man die datai ausführt soll main ausgeführt werden
 if abspath(PROGRAM_FILE) == @__FILE__
+<<<<<<< HEAD
     main("Frage_3", "1_euro_storage_cost")
+=======
+    main("Frage_3", "500_euro_storage_cost")
+
+>>>>>>> 58521e9445f4bed65738f1de8ca3cc1f71df6f9e
 end
 
 #main("MyDirectory", "MyTest"); # Uncomment and modify to run with custom names
