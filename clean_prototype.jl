@@ -57,11 +57,11 @@ function SolveEPP(time_limit::Int64)
     re = [0, 0, 0, 20, 30, 40, 40, 50, 70, 80, 90, 80, 100, 70, 70, 60, 50, 30, 30, 10, 10, 0, 0, 0];
 
     # Battery-related parameters (inactive by default)
-    Max_charge_rate = 0 #40
-    Max_discharge_rate = 0 #40
-    Bat_cap = 0 #300
-    Bat_SoC_initial = 0 #150
-    Bat_SoC_end = 0 #150
+    Max_charge_rate     = 100 #40
+    Max_discharge_rate  = 100 #40
+    Bat_cap             = 300 #300
+    Bat_SoC_initial     = 150 #150
+    Bat_SoC_end         = 150 #150
 
     # Add cost parameters
     c_charge = 1.0;    # €/kWh cost of charging
@@ -460,6 +460,8 @@ end
 ####################
 
 function main(directory_name::String="Test1", file_prefix::String="default")
+    println("")
+    println("starting test run ...")
     start_time = time() 
     
     model, obj_val, solve_time, gap, E_toH2, E_fromH2, H_storage, η_toH2, η_fromH2, re, ED, e, c_hBuy, c_hSell = SolveEPP(360);
@@ -515,15 +517,19 @@ function main(directory_name::String="Test1", file_prefix::String="default")
         println(io, "H2 production efficiencies by period: ", η_toH2)
         println(io, "H2 usage efficiencies by period: ", η_fromH2)
         println(io, "\nPERIOD-BY-PERIOD VALUES:")
-        println(io, "\n" * "#"^150)  
-        @printf(io, "%-6s | %12s | %12s | %12s | %12s | %12s | %12s | %12s\n", 
-               "Period", "E_toH2", "E_fromH2", "H_storage", "H_sell", "H_buy", "E_charge", "E_discharge")
-        println(io, "-"^150)  
+        println(io, "\n" * "#"^200)  
+        @printf(io, "%-6s | %12s | %12s | %12s | %12s | %12s | %12s | %12s | %12s | %12s | %12s | %12s\n", 
+               "Period", "E_toH2", "E_fromH2", "H_storage", "H_sell", "H_buy", "E_charge", "E_discharge", 
+               "E_sell", "E_buy", "Renewables", "DEMAND")
+        println(io, "-"^200)  
         for p in 1:24
-            @printf(io, "%-6d | %12.2f | %12.2f | %12.2f | %12.2f | %12.2f | %12.2f | %12.2f\n", 
-                   p, E_toH2[p], E_fromH2[p], H_storage[p], H_sell[p], H_buy[p], E_charge[p], E_discharge[p])
+            @printf(io, "%-6d | %12.2f | %12.2f | %12.2f | %12.2f | %12.2f | %12.2f | %12.2f | %12.2f | %12.2f | %12.2f | %12.2f\n", 
+                   p, E_toH2[p], E_fromH2[p], H_storage[p], H_sell[p], H_buy[p], 
+                   E_charge[p], E_discharge[p], 
+                   value(model[:E_sell][p]), value(model[:E_buy][p]), 
+                   re[p], ED[p])
         end
-        println(io, "#"^150)  
+        println(io, "#"^200)  
         println(io, "\nSUMMARY STATISTICS:")
         println(io, "Average H2 production efficiency: ", results["avg_h2_production_efficiency"])
         println(io, "Average H2 usage efficiency: ", results["avg_h2_usage_efficiency"])
@@ -536,8 +542,6 @@ function main(directory_name::String="Test1", file_prefix::String="default")
     end
     
     CSV.write(detailed_file, detailed_results)
-    
-    println("starting test run ...")
     println("#########################################################################################")
     println("zusammenfassung:")
     println("Objective value: ", obj_val, " found after ", solve_time, " seconds. Relative gap is: ", gap)
@@ -568,13 +572,14 @@ function main(directory_name::String="Test1", file_prefix::String="default")
     println("Results saved in $(results_dir)/ directory with timestamp $(timestamp)")
     println("Ende")
     println("#########################################################################################")
+    println()
     println("Total execution time: $(round(total_time, digits=2)) seconds")
     println()
 end
 
 # wenn man die datai ausführt soll main ausgeführt werden
 if abspath(PROGRAM_FILE) == @__FILE__
-    main("Test10", "1Kauf_100kgMin")
+    main("BatteryVergleich", "Battery_2Kauf_150kgMin")
 end
 
 #main("MyDirectory", "MyTest"); # Uncomment and modify to run with custom names
