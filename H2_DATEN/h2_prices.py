@@ -1,5 +1,14 @@
 import numpy as np
 
+# Daily patterns:
+# Higher prices during peak demand hours (morning: 6-9am, evening: 5-8pm)
+# Lower prices during night hours (11pm-5am)
+# Medium prices during regular business hours
+# Price relationship:
+# Selling price should typically be 60-70% of buying price (your 3:5 ratio is good)
+# Price variations should show some smoothness (avoid too many sudden jumps)
+
+
 # Base price ranges (€/kg)
 green_h2_price = np.random.uniform(4, 8, 24)  # Green hydrogen
 blue_h2_price = np.random.uniform(2, 4, 24)   # Blue hydrogen

@@ -51,17 +51,18 @@ function SolveEPP(time_limit::Int64)
 
     # Energy prices per period
     c_buy = [1, 1, 1, 1, 2, 2, 3, 4, 5, 5, 1, 4, 3, 3, 1, 1, 1, 1, 4, 3, 3, 1, 1, 1];
-    c_sell = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1];
+    c_sell = [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5];
+    # c_sell = [0.1, 0.2, 0.1 , 0.5, 2.0, 1.5, 2.5, 3.0, 2.2, 5.0, 7.0, 4.0, 2.0, 1.5, 2.4, 1.8, 1.5, 1.0, 1.0, 1.0, 0.5, 0.3, 0.2, 0.1];
 
     # Renewable generation per period
     re = [0, 0, 0, 20, 30, 40, 40, 50, 70, 80, 90, 80, 100, 70, 70, 60, 50, 30, 30, 10, 10, 0, 0, 0];
 
     # Battery-related parameters (inactive by default)
-    Max_charge_rate     = 100 #40
-    Max_discharge_rate  = 100 #40
-    Bat_cap             = 300 #300
-    Bat_SoC_initial     = 150 #150
-    Bat_SoC_end         = 150 #150
+    Max_charge_rate     = 0 #100 #40
+    Max_discharge_rate  = 0 #100 #40
+    Bat_cap             = 0 #300 #300
+    Bat_SoC_initial     = 0 #150 #150
+    Bat_SoC_end         = 0 #150 #150
 
     # Add cost parameters
     c_charge = 1.0;    # €/kWh cost of charging
@@ -170,9 +171,11 @@ function SolveEPP(time_limit::Int64)
     #euro/kg wasserstoffpreise
     c_hBuy  = [7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0]
     c_hSell = [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]
+    #c_hBuy  = [5.0, 4.5, 4.0, 4.0, 4.5, 6.0, 7.5, 8.0, 7.5, 6.5, 6.0, 6.5, 7.0, 6.5, 6.0, 6.0, 6.5, 7.0, 8.0, 7.5, 6.5, 6.0, 5.5, 5.0]
+    #c_hSell = [3.0, 2.7, 2.4, 2.4, 2.7, 3.6, 4.5, 4.8, 4.5, 3.9, 3.6, 3.9, 4.2, 3.9, 3.6, 3.6, 3.9, 4.2, 4.8, 4.5, 3.9, 3.6, 3.3, 3.0]
 
     #lagerkosten 20-750 $ per kg H2
-    c_H_storage = 5
+    c_H_storage = 0 #5
 
     c_h2charge  = 0.1      # €/kWh cost of charging
     c_h2discharge = 0.1    # €/kWh cost of charging
@@ -180,9 +183,9 @@ function SolveEPP(time_limit::Int64)
     H_heizwert = 1/3; # kg/kwh //  33.33 kwh/kg
     
     
-    leistung_punkte              = [0,   10,    20,    30,    40,    50,   60,    70,   80,  90,  100]   # kW (Leistung)
-    wirkungsgrad_punkte_toH2     = [0, 0.75,  0.78,  0.72,  0.65,  0.65,  0.6,   0.6, 0.55, 0.5,  0.5]   # toH2
-    wirkungsgrad_punkte_fromH2   = [0,  0.6,  0.58,  0.55,  0.52,  0.50, 0.48,  0.45, 0.43, 0.4,  0.3]   # fromH2
+    leistung_punkte              = [0,   10,    20,    30,    40,    50,   60,    70,   80,   90,   100]   # kW (Leistung)
+    wirkungsgrad_punkte_toH2     = [0, 0.95,  0.90,  0.88,  0.85,  0.82, 0.80,  0.78, 0.75, 0.72,  0.70]   # toH2
+    wirkungsgrad_punkte_fromH2   = [0,  0.6,  0.58,  0.55,  0.52,  0.50, 0.48,  0.45, 0.43,  0.4,   0.3]   # fromH2
 
     function safe_inverse(x)
         return x == 0 ? 1000.0 : 1/x  
@@ -217,6 +220,11 @@ function SolveEPP(time_limit::Int64)
     #######################
     ### Constraints + sos2 ,   EC - Elektrolyse,   FC - Fuelcell
     #######################
+
+    # Frage 1!
+    # @constraint(EPP, [p=1:P], H_buy[p] == 0)
+    # @constraint(EPP, [p=1:P], H_sell[p] == 0)
+
     # max constraint:
     @constraint(EPP, [p=1:P], H_storage[p] <= H_max)
     @constraint(EPP, [p=1:P], E_toH2[p] <= H_Max_charge_rate)
@@ -264,14 +272,17 @@ function SolveEPP(time_limit::Int64)
     # If z_buy[p] = 0, no purchase allowed in period p
     @constraint(EPP, [p=1:P], H_buy[p] <= H_max * z_buy[p]) 
     # If z_buy[p] = 1, purchase must be at least min_amount
-    @constraint(EPP, [p=1:P], H_buy[p] >= min_H_purchase_amount * z_buy[p])  
-    
+    @constraint(EPP, [p=1:P], H_buy[p] >= min_H_purchase_amount * z_buy[p]) 
     # Limit total number of purchases
-    @constraint(EPP, sum(z_buy[p] for p=1:P) <= max_H_purchases)
+    @constraint(EPP, sum(z_buy[p] for p=1:P) <= max_H_purchases) 
+
+    # kein H_sell und H_buy in einer periode
+    @constraint(EPP, [p=1:P], H_buy[p] * H_sell[p] == 0)
+    
 
     #######################
     ### Objective Function ###
-    #######################
+    ####################### 
     @objective(EPP, Min, 
         sum(c_buy[p]*E_buy[p] - c_sell[p]*E_sell[p] for p=1:P) +  
         sum(c_charge*E_charge[p] + c_discharge*E_discharge[p] for p=1:P) +  
@@ -279,6 +290,7 @@ function SolveEPP(time_limit::Int64)
         sum(c_hBuy[p] * H_buy[p] - c_hSell[p] * H_sell[p] for p=1:P) +  
         sum(c_H_storage * H_storage[p] for p=1:P)  
     )
+    # ohne Brennstoffzelle ist ZF = 4175
 
     #######################
     ### Solving the Model ###
@@ -462,6 +474,7 @@ end
 function main(directory_name::String="Test1", file_prefix::String="default")
     println("")
     println("starting test run ...")
+    println("")
     start_time = time() 
     
     model, obj_val, solve_time, gap, E_toH2, E_fromH2, H_storage, η_toH2, η_fromH2, re, ED, e, c_hBuy, c_hSell = SolveEPP(360);
@@ -499,7 +512,7 @@ function main(directory_name::String="Test1", file_prefix::String="default")
         η_fromH2 = η_fromH2
     )
 
-    results_dir = "results/$(directory_name)"
+    results_dir = "Lösungsansatz/$(directory_name)"
     mkpath(results_dir)
     timestamp = Dates.format(Dates.now(), "yyyy-mm-dd_HH-MM-SS")
     summary_file = "$(results_dir)/$(file_prefix)_summary_$(timestamp).txt"
@@ -579,7 +592,7 @@ end
 
 # wenn man die datai ausführt soll main ausgeführt werden
 if abspath(PROGRAM_FILE) == @__FILE__
-    main("BatteryVergleich", "Battery_2Kauf_150kgMin")
+    main("Frage_3", "keine_StorageCost")
 end
 
 #main("MyDirectory", "MyTest"); # Uncomment and modify to run with custom names
