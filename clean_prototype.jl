@@ -175,11 +175,7 @@ function SolveEPP(time_limit::Int64)
     #c_hSell = [3.0, 2.7, 2.4, 2.4, 2.7, 3.6, 4.5, 4.8, 4.5, 3.9, 3.6, 3.9, 4.2, 3.9, 3.6, 3.6, 3.9, 4.2, 4.8, 4.5, 3.9, 3.6, 3.3, 3.0]
 
     #lagerkosten 20-750 $ per kg H2
-<<<<<<< HEAD
-    c_H_storage = 2.5 #5
-=======
-    c_H_storage = 1 #5
->>>>>>> 58521e9445f4bed65738f1de8ca3cc1f71df6f9e
+    c_H_storage = 500 #5
 
     c_h2charge  = 0.1      # €/kWh cost of charging
     c_h2discharge = 0.1    # €/kWh cost of charging
@@ -339,8 +335,11 @@ function PlotResults(;alpha, X, E_toH2, E_fromH2, H_storage, E_charge, E_dischar
     g1 = scatter(x, ablaufy1(1), label=["off" "turn on" "idle" "processing of job i" "turn off" "setup"], 
         markershape=[:diamond :diamond :utriangle :rect :diamond], colour=[:dodgerblue :red :orchid :limegreen :chocolate], markersize=10,
         ylabel="Machines",
-        xlim=(0,P+1), ylim=(0.5,M+0.5), xticks=1:P, yticks=1:M, yflip=true, 
-        left_margin=5Plots.mm, right_margin=5Plots.mm, top_margin=0Plots.mm, bottom_margin=0Plots.mm, size=(1000,500))
+        xlim=(0,25), ylim=(0.5,M+0.5), xticks=1:P, yticks=1:M, yflip=true, 
+        left_margin=5Plots.mm, right_margin=5Plots.mm, 
+        bottom_margin=-5Plots.mm,  # Negative margin to remove space
+        top_margin=10Plots.mm,     # Keep some margin for title
+        size=(1000,500))
 
     for m=2:M
     scatter!(x,ablaufy1(m), label=:none, legend=:outerbottom, legend_font_pointsize=5,
@@ -366,7 +365,7 @@ function PlotResults(;alpha, X, E_toH2, E_fromH2, H_storage, E_charge, E_dischar
         color=[:magenta3 :red2 :royalblue :lightblue :limegreen :darkred],
         ylabel="Energie [kWh]",
         title="Grid & Battery Energy Flows",
-        xlim=(0,P), xticks=1:P,
+        xlim=(0,25), xticks=1:P,
         yticks=-200:50:200,
         left_margin=left_margin,
         right_margin=20Plots.mm,
@@ -388,7 +387,7 @@ function PlotResults(;alpha, X, E_toH2, E_fromH2, H_storage, E_charge, E_dischar
         color=[:navy :skyblue],
         ylabel="Energie [kWh]",
         title="H₂ System Energy Flows",
-        xlim=(0,P), xticks=1:P,
+        xlim=(0,25), xticks=1:P,
         yticks=-100:50:100,
         left_margin=left_margin,
         right_margin=20Plots.mm,
@@ -409,7 +408,7 @@ function PlotResults(;alpha, X, E_toH2, E_fromH2, H_storage, E_charge, E_dischar
         color=[:green :red],
         ylabel="H₂ [kg]",
         title="H₂ Trading & Storage",
-        xlim=(0,P), xticks=1:P,
+        xlim=(0,25), xticks=1:P+1,
         left_margin=left_margin,
         right_margin=20Plots.mm,
         top_margin=5Plots.mm,
@@ -429,7 +428,7 @@ function PlotResults(;alpha, X, E_toH2, E_fromH2, H_storage, E_charge, E_dischar
         ylabel="H₂ [kg]", 
         color=:blue,
         title="H₂ Storage and Prices",
-        xlim=(0,P), xticks=1:P,
+        xlim=(0,25), xticks=1:P,
         left_margin=left_margin,
         right_margin=20Plots.mm,
         top_margin=5Plots.mm,
@@ -469,6 +468,162 @@ function PlotResults(;alpha, X, E_toH2, E_fromH2, H_storage, E_charge, E_dischar
         top_margin=10Plots.mm,
         bottom_margin=20Plots.mm,
         subplot_spacing=0.05)
+end
+
+function PlotResultsStacked(;alpha, X, E_toH2, E_fromH2, H_storage, E_charge, E_discharge, H_buy, H_sell, 
+                    E_buy, E_sell, Periods, P=24, M=2, J=15, S=5, e=nothing, re=nothing,
+                    c_hBuy=nothing, c_hSell=nothing)
+    x = Periods
+
+    # Graph 1: Scheduling (Machine States) - Remains the same
+    function ablaufy1(m)
+        y = [alpha[m,:,1] alpha[m,:,2] alpha[m,:,3] alpha[m,:,4] alpha[m,:,5]]*m
+    end
+
+    g1 = scatter(x, ablaufy1(1), label=["off" "turn on" "idle" "processing of job i" "turn off" "setup"], 
+        markershape=[:diamond :diamond :utriangle :rect :diamond], colour=[:dodgerblue :red :orchid :limegreen :chocolate], markersize=10,
+        ylabel="Machines",
+        xlim=(0,25), ylim=(0.5,M+0.5), xticks=1:P, yticks=1:M, yflip=true, 
+        left_margin=5Plots.mm, right_margin=5Plots.mm, 
+        bottom_margin=-5Plots.mm,  # Negative margin to remove space
+        top_margin=10Plots.mm,     # Keep some margin for title
+        size=(1000,500))
+
+    for m=2:M
+        scatter!(x,ablaufy1(m), label=:none, legend=:outerbottom, legend_font_pointsize=5,
+                markershape=[:diamond :diamond :utriangle :rect :diamond], colour=[:dodgerblue :red :orchid :limegreen :chocolate], markersize=10)
+    end
+
+    for m=1:M, j=1:J, p=1:P
+        annotate!((p, X[m,j,p]*m, text(string(j), :black, :10)));
+    end
+    
+    # Common plot parameters for stacked graphs
+    plot_height = 200  # Reduced height for stacked plots
+    left_margin = 30Plots.mm
+    right_margin = 20Plots.mm
+
+    # Calculate energy demand
+    ED = zeros(length(x))
+    if !isnothing(e)
+        ED[x] = sum(alpha[m,x,s]*e[m,s] for m=1:M, s=1:S)
+    end
+
+    # Grid & Battery Energy Flows
+    y_grid = [E_buy -E_sell E_charge E_discharge re -ED]
+    g2 = groupedbar(x, y_grid, 
+        label=["E_purchased" "E_sold" "E_charge" "E_discharge" "Erneuerbare" "Energiebedarf"],
+        color=[:magenta3 :red2 :royalblue :lightblue :limegreen :darkred],
+        ylabel="Energie [kWh]",
+        title="",
+        xlim=(0,25), xticks=nothing, xgrid=false,
+        yticks=-200:50:200,
+        left_margin=left_margin,
+        right_margin=right_margin,
+        bottom_margin=-25Plots.mm,  # More negative margin
+        top_margin=-25Plots.mm,     # More negative margin
+        size=(1000,plot_height),
+        legend=:right,
+        legend_font_pointsize=6,
+        framestyle=:box,
+        grid=false,
+        showaxis=:l,  # Only show left axis
+        foreground_color_axis=nothing,
+        foreground_color_border=nothing,
+        tick_direction=:out)
+
+    # H2 System Energy Flows
+    y_h2 = [-E_toH2 E_fromH2]
+    g3 = groupedbar(x, y_h2,
+        label=["Elektrolyse" "Brennstoffzelle"],
+        color=[:navy :skyblue],
+        ylabel="Energie [kWh]",
+        title="",
+        xlim=(0,25), xticks=nothing, xgrid=false,
+        yticks=-100:50:100,
+        left_margin=left_margin,
+        right_margin=right_margin,
+        bottom_margin=-25Plots.mm,  # More negative margin
+        top_margin=-25Plots.mm,     # More negative margin
+        size=(1000,plot_height),
+        legend=:right,
+        legend_font_pointsize=6,
+        framestyle=:box,
+        grid=false,
+        showaxis=:l,  # Only show left axis
+        foreground_color_axis=nothing,
+        foreground_color_border=nothing,
+        tick_direction=:out)
+
+    # H2 Trading
+    g4 = groupedbar(x, [H_buy -H_sell], 
+        label=["H₂ Einkauf" "H₂ Verkauf"],
+        color=[:green :red],
+        ylabel="H₂ [kg]",
+        title="",
+        xlim=(0,25), xticks=nothing, xgrid=false,
+        left_margin=left_margin,
+        right_margin=right_margin,
+        bottom_margin=-25Plots.mm,  # More negative margin
+        top_margin=-25Plots.mm,     # More negative margin
+        size=(1000,plot_height),
+        legend=:right,
+        legend_font_pointsize=6,
+        framestyle=:box,
+        grid=false,
+        showaxis=:l,  # Only show left axis
+        foreground_color_axis=nothing,
+        foreground_color_border=nothing,
+        tick_direction=:out)
+
+    # H2 Storage and Prices (bottom plot - keep x-axis labels)
+    g5 = plot(x, H_storage, 
+        label="H₂ Speicherstand",
+        ylabel="H₂ [kg]", 
+        xlabel="Periods",  # Add x-axis label only to bottom plot
+        color=:blue,
+        title="",
+        xlim=(0,25), xticks=1:25, xgrid=false,
+        left_margin=left_margin,
+        right_margin=right_margin,
+        bottom_margin=5Plots.mm,   # Keep small margin for x-axis labels
+        top_margin=-25Plots.mm,     # More negative margin
+        size=(1000,plot_height),
+        legend=:right,
+        legend_font_pointsize=6,
+        framestyle=:box,
+        grid=false,
+        foreground_color_axis=nothing,
+        foreground_color_border=nothing,
+        tick_direction=:out)
+    
+    # Add H2 prices on second y-axis
+    plot!(twinx(), x, [c_hBuy c_hSell], 
+        label=["H₂ Kaufpreis" "H₂ Verkaufpreis"],
+        ylabel="Preis [€/kg]", 
+        color=[:darkgreen :darkred], 
+        line=:dash,
+        legend=:right,
+        legend_font_pointsize=6,
+        framestyle=:box,
+        grid=false,
+        foreground_color_axis=nothing,
+        foreground_color_border=nothing,
+        tick_direction=:out)
+
+    # Combine all plots with zero spacing
+    plot(g1, g2, g3, g4, g5,
+        layout=grid(5, 1, heights=[0.3, 0.175, 0.175, 0.175, 0.175]), 
+        size=(1200,1500),
+        plot_title="Energy System Operation Schedule",
+        plot_titlefontsize=14,
+        plot_titlelocation=:center,
+        top_margin=0Plots.mm,
+        bottom_margin=0Plots.mm,
+        subplot_spacing=0,  # Set to 0 to remove spacing
+        margins=0Plots.mm,  # Set all margins to 0
+        link=:x,  # Link x-axes to ensure perfect alignment
+        framestyle=:box)  # Ensure consistent frame style
 end
 
 ####################
@@ -521,7 +676,7 @@ function main(directory_name::String="Test1", file_prefix::String="default")
     timestamp = Dates.format(Dates.now(), "yyyy-mm-dd_HH-MM-SS")
     summary_file = "$(results_dir)/$(file_prefix)_summary_$(timestamp).txt"
     detailed_file = "$(results_dir)/$(file_prefix)_detailed_$(timestamp).csv"
-    plot_file = "$(results_dir)/$(file_prefix)_plot_$(timestamp).png"
+    plot_file = "$(results_dir)/$(file_prefix)_plot.png"
     
     open(summary_file, "w") do io
         println(io, "#########################################################################################")
@@ -564,7 +719,7 @@ function main(directory_name::String="Test1", file_prefix::String="default")
     println("Objective value: ", obj_val, " found after ", solve_time, " seconds. Relative gap is: ", gap)
     println("")
     println("Creating visualization...")
-    p = PlotResults(
+    p1 = PlotResults(
         alpha=value.(model[:alpha]),
         X=value.(model[:X]),
         E_toH2=E_toH2,
@@ -583,10 +738,34 @@ function main(directory_name::String="Test1", file_prefix::String="default")
         c_hBuy=c_hBuy,
         c_hSell=c_hSell
     );
-    savefig(p, plot_file)
+    savefig(p1, plot_file)
+
+    # Create and save stacked version
+    p2 = PlotResultsStacked(
+        alpha=value.(model[:alpha]),
+        X=value.(model[:X]),
+        E_toH2=E_toH2,
+        E_fromH2=E_fromH2,
+        H_storage=H_storage,
+        E_charge=E_charge,
+        E_discharge=E_discharge,
+        H_buy=H_buy,
+        H_sell=H_sell,
+        E_buy=value.(model[:E_buy]),
+        E_sell=value.(model[:E_sell]),
+        Periods=1:24,
+        e=e,
+        re=re,
+        S=5,
+        c_hBuy=c_hBuy,
+        c_hSell=c_hSell
+    );
+    stacked_plot_file = replace(plot_file, ".png" => "_stacked.png")
+    savefig(p2, stacked_plot_file)
     
     total_time = time() - start_time 
     println("Results saved in $(results_dir)/ directory with timestamp $(timestamp)")
+    println("Both regular and stacked plot versions have been saved")
     println("Ende")
     println("#########################################################################################")
     println()
@@ -596,12 +775,7 @@ end
 
 # wenn man die datai ausführt soll main ausgeführt werden
 if abspath(PROGRAM_FILE) == @__FILE__
-<<<<<<< HEAD
-    main("Frage_3", "1_euro_storage_cost")
-=======
-    main("Frage_3", "500_euro_storage_cost")
-
->>>>>>> 58521e9445f4bed65738f1de8ca3cc1f71df6f9e
+    main("Frage_3", "500_XX_euro")
 end
 
 #main("MyDirectory", "MyTest"); # Uncomment and modify to run with custom names
