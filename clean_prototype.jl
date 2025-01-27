@@ -159,7 +159,7 @@ function SolveEPP(time_limit::Int64)
     ############################################
     ### Hydrogen fuel cell 
     ############################################
-    H_max = 1000;                # kg H2 Speicherkapazität -> ~33333 kWh
+    H_max = 1000;                # kg H2 Speicherkapazität -> ~33333 kWh 
     H_storage_initial = 0;       # kg H2 Anfangsbestand
     H_storage_end = 0;           # kg H2 Endbestand     
     H_Max_charge_rate = 100;     # kW max Elektrolyse-Leistung    
@@ -167,15 +167,14 @@ function SolveEPP(time_limit::Int64)
     max_H_purchases = 1;         # Maximum number of H2 purchases allowed in one day
     min_H_purchase_amount = 100; # Minimum amount of H2 that must be purchased when making a purchase (kg)
 
-
     #euro/kg wasserstoffpreise
-    c_hBuy  = [7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0]
-    c_hSell = [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]
-    #c_hBuy  = [5.0, 4.5, 4.0, 4.0, 4.5, 6.0, 7.5, 8.0, 7.5, 6.5, 6.0, 6.5, 7.0, 6.5, 6.0, 6.0, 6.5, 7.0, 8.0, 7.5, 6.5, 6.0, 5.5, 5.0]
-    #c_hSell = [3.0, 2.7, 2.4, 2.4, 2.7, 3.6, 4.5, 4.8, 4.5, 3.9, 3.6, 3.9, 4.2, 3.9, 3.6, 3.6, 3.9, 4.2, 4.8, 4.5, 3.9, 3.6, 3.3, 3.0]
+    # c_hBuy  = [7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0]
+    # c_hSell = [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]
+    c_hBuy  = [5.0, 4.5, 4.0, 4.0, 4.5, 6.0, 7.5, 8.0, 7.5, 6.5, 6.0, 6.5, 7.0, 6.5, 6.0, 6.0, 6.5, 7.0, 8.0, 7.5, 6.5, 6.0, 5.5, 5.0]
+    c_hSell = [3.0, 2.7, 2.4, 2.4, 2.7, 3.6, 4.5, 4.8, 4.5, 3.9, 3.6, 3.9, 4.2, 3.9, 3.6, 3.6, 3.9, 4.2, 4.8, 4.5, 3.9, 3.6, 3.3, 3.0]
 
     #lagerkosten 20-750 $ per kg H2
-    c_H_storage = 500 #5
+    c_H_storage = 0.1 #5
 
     c_h2charge  = 0.1      # €/kWh cost of charging
     c_h2discharge = 0.1    # €/kWh cost of charging
@@ -775,7 +774,7 @@ end
 
 # wenn man die datai ausführt soll main ausgeführt werden
 if abspath(PROGRAM_FILE) == @__FILE__
-    main("Frage_3", "500_XX_euro")
+    main("Frage_4", "1000_kg_optimalerRun")
 end
 
 #main("MyDirectory", "MyTest"); # Uncomment and modify to run with custom names
