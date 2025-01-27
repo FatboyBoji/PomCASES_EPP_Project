@@ -179,22 +179,14 @@ function SolveEPP(time_limit::Int64)
     c_h2charge  = 0.1      # €/kWh cost of charging
     c_h2discharge = 0.1    # €/kWh cost of charging
 
-    H_heizwert = 1/33.33333; # kg/kwh //  33.33 kwh/kg
+    H_heizwert = 1/3; # kg/kwh //  33.33 kwh/kg
     
-    
-    # leistung_punkte              = [0,   10,    20,    30,    40,    50,   60,    70,   80,   90,   100]   # kW (Leistung)
-    # wirkungsgrad_punkte_toH2     = [0, 0.95,  0.90,  0.88,  0.85,  0.82, 0.80,  0.78, 0.75, 0.72,  0.70]   # toH2
-    # wirkungsgrad_punkte_fromH2   = [0,  0.6,  0.58,  0.55,  0.52,  0.50, 0.48,  0.45, 0.43,  0.4,   0.3]   # fromH2
-    leistung_punkte              = [0,   10,    20,    30,    40,    50,   60,    70,   80,   90,   100]
-    wirkungsgrad_punkte_toH2     = [0, 1.00,  0.95,  0.93,  0.90,  0.87, 0.85,  0.83, 0.80, 0.77,  0.75]
-    wirkungsgrad_punkte_fromH2   = [0, 0.90,  0.88,  0.85,  0.82,  0.80, 0.78,  0.75, 0.73, 0.70,  0.60]
-    
+    a_toH2 = 0.95
+    a_fromH2 = 0.8
+    inv_aToH2 = 1/0.95
+    inv_afromH2 = 1/0.8
 
-    function safe_inverse(x)
-        return x == 0 ? 0.0 : 1/x  
-    end
-    wirkungsgrad_punkte_toH2_inv = [safe_inverse(x) for x in wirkungsgrad_punkte_toH2]
-    wirkungsgrad_punkte_fromH2_inv = [safe_inverse(x) for x in wirkungsgrad_punkte_fromH2]
+
 
     #######################
     ### Decision Variables ###
@@ -208,17 +200,17 @@ function SolveEPP(time_limit::Int64)
     @variable(EPP, z_buy[1:P], Bin)   #if H2 is purchased in period p, 0 otherwise
     
     # SOS2 Variablen
-    @variable(EPP, λ_toH2[1:P, 1:length(leistung_punkte)] >= 0)
-    @variable(EPP, λ_fromH2[1:P, 1:length(leistung_punkte)] >= 0)
-    @variable(EPP, η_toH2[1:P] >= 0)
-    @variable(EPP, η_fromH2[1:P] >= 0)
+    # @variable(EPP, λ_toH2[1:P, 1:length(leistung_punkte)] >= 0)
+    # @variable(EPP, λ_fromH2[1:P, 1:length(leistung_punkte)] >= 0)
+    # @variable(EPP, η_toH2[1:P] >= 0)
+    # @variable(EPP, η_fromH2[1:P] >= 0)
     @variable(EPP, EC_menge[1:P] >= 0)
     @variable(EPP, FC_menge[1:P] >= 0)
 
-    @variable(EPP, active_1[1:P], Bin)
-    @variable(EPP, active_2[1:P], Bin)
-    @variable(EPP, inv_η_toH2[1:P] >= 0)
-    @variable(EPP, inv_η_fromH2[1:P] >= 0)
+    # @variable(EPP, active_1[1:P], Bin)
+    # @variable(EPP, active_2[1:P], Bin)
+    # @variable(EPP, inv_η_toH2[1:P] >= 0)
+    # @variable(EPP, inv_η_fromH2[1:P] >= 0)
 
     #######################
     ### Constraints + sos2 ,   EC - Elektrolyse,   FC - Fuelcell
@@ -235,25 +227,24 @@ function SolveEPP(time_limit::Int64)
 
     ## wenn storage[p] < max dann EC möglich ,  storage > 0 dann FC möglich
     # SOS2 Constraints für Elektrolyse
-    @constraint(EPP, [p=1:P], E_toH2[p] == sum(λ_toH2[p,i] * leistung_punkte[i] for i in eachindex(leistung_punkte)) * active_1[p])
-    @constraint(EPP, [p=1:P], active_1[p] <= 1.999 - (H_storage[p] / H_max) )  # Aktivieren nur wenn H_storage < H_max
-    @constraint(EPP, [p=1:P], η_toH2[p] == sum(λ_toH2[p,i] * wirkungsgrad_punkte_toH2[i] for i in eachindex(leistung_punkte)))
-    @constraint(EPP, [p=1:P], inv_η_toH2[p] == sum(λ_toH2[p,i] * wirkungsgrad_punkte_toH2_inv[i] for i in eachindex(leistung_punkte)))
-    @constraint(EPP, [p=1:P], sum(λ_toH2[p,i] for i in eachindex(leistung_punkte)) == 1)
-    @constraint(EPP, [p=1:P], λ_toH2[p,:] in SOS2())
+    # @constraint(EPP, [p=1:P], E_toH2[p] == sum(λ_toH2[p,i] * leistung_punkte[i] for i in eachindex(leistung_punkte)) * active_1[p])
+    # @constraint(EPP, [p=1:P], active_1[p] <= 1.999 - (H_storage[p] / H_max) )  # Aktivieren nur wenn H_storage < H_max
+    # @constraint(EPP, [p=1:P], η_toH2[p] == sum(λ_toH2[p,i] * wirkungsgrad_punkte_toH2[i] for i in eachindex(leistung_punkte)))
+    # @constraint(EPP, [p=1:P], inv_η_toH2[p] == sum(λ_toH2[p,i] * wirkungsgrad_punkte_toH2_inv[i] for i in eachindex(leistung_punkte)))
+    # @constraint(EPP, [p=1:P], sum(λ_toH2[p,i] for i in eachindex(leistung_punkte)) == 1)
+    # @constraint(EPP, [p=1:P], λ_toH2[p,:] in SOS2())
 
     # SOS2 Constraints für Brennstoffzelle
-    @constraint(EPP, [p=1:P], E_fromH2[p] == sum(λ_fromH2[p,i] * leistung_punkte[i] for i in eachindex(leistung_punkte)) * active_2[p])
-    @constraint(EPP, [p=1:P], active_2[p] <= H_storage[p])  # Aktivieren nur wenn H_storage > 0
-    @constraint(EPP, [p=1:P], η_fromH2[p] == sum(λ_fromH2[p,i] * wirkungsgrad_punkte_fromH2[i] for i in eachindex(leistung_punkte)))
-    @constraint(EPP, [p=1:P], inv_η_fromH2[p] == sum(λ_fromH2[p,i] * wirkungsgrad_punkte_fromH2_inv[i] for i in eachindex(leistung_punkte)))
-    @constraint(EPP, [p=1:P], sum(λ_fromH2[p,i] for i in eachindex(leistung_punkte)) == 1)
-    @constraint(EPP, [p=1:P], λ_fromH2[p,:] in SOS2())
-
+    # @constraint(EPP, [p=1:P], E_fromH2[p] == sum(λ_fromH2[p,i] * leistung_punkte[i] for i in eachindex(leistung_punkte)) * active_2[p])
+    # @constraint(EPP, [p=1:P], active_2[p] <= H_storage[p])  # Aktivieren nur wenn H_storage > 0
+    # @constraint(EPP, [p=1:P], η_fromH2[p] == sum(λ_fromH2[p,i] * wirkungsgrad_punkte_fromH2[i] for i in eachindex(leistung_punkte)))
+    # @constraint(EPP, [p=1:P], inv_η_fromH2[p] == sum(λ_fromH2[p,i] * wirkungsgrad_punkte_fromH2_inv[i] for i in eachindex(leistung_punkte)))
+    # @constraint(EPP, [p=1:P], sum(λ_fromH2[p,i] for i in eachindex(leistung_punkte)) == 1)
+    # @constraint(EPP, [p=1:P], λ_fromH2[p,:] in SOS2())
 
     # Umrechnung Energie zu H2-Menge
-    @constraint(EPP, [p=1:P], EC_menge[p] == E_toH2[p] * η_toH2[p] * H_heizwert)  # kWh * % * kg/kwh = kg
-    @constraint(EPP, [p=1:P], FC_menge[p] == E_fromH2[p] * inv_η_fromH2[p] * H_heizwert) # wichtig der invertierte Wikrungsgrad!
+    @constraint(EPP, [p=1:P], EC_menge[p] == E_toH2[p] * a_toH2 * H_heizwert)  # kwh * % * kg/kwh = kg
+    @constraint(EPP, [p=1:P], FC_menge[p] == E_fromH2[p] * a_fromH2 * H_heizwert) 
 
     # Speicherstandsbilanz
     # first period
@@ -292,7 +283,7 @@ function SolveEPP(time_limit::Int64)
     @objective(EPP, Min, 
         sum(c_buy[p]*E_buy[p] - c_sell[p]*E_sell[p] for p=1:P) +  
         sum(c_charge*E_charge[p] + c_discharge*E_discharge[p] for p=1:P) +  
-        sum(c_h2charge * inv_η_toH2[p] * E_toH2[p] + c_h2discharge * inv_η_fromH2[p] * E_fromH2[p] for p=1:P) +
+        sum(c_h2charge * inv_aToH2 * E_toH2[p] + c_h2discharge * inv_afromH2 * E_fromH2[p] for p=1:P) +
         sum(c_hBuy[p] * H_buy[p] - c_hSell[p] * H_sell[p] for p=1:P) +  
         sum(c_H_storage * H_storage[p] for p=1:P)  
     )
@@ -318,10 +309,10 @@ function SolveEPP(time_limit::Int64)
            JuMP.value.(E_toH2),
            JuMP.value.(E_fromH2),
            JuMP.value.(H_storage),
-           JuMP.value.(η_toH2),
-           JuMP.value.(η_fromH2),
-           JuMP.value.(inv_η_toH2),
-           JuMP.value.(inv_η_fromH2),
+           JuMP.value.(a_toH2),
+           JuMP.value.(a_fromH2),
+           JuMP.value.(inv_aToH2),
+           JuMP.value.(inv_afromH2),
            re,  
            ED,  
            e,  
@@ -644,7 +635,7 @@ function main(directory_name::String="Test1", file_prefix::String="default")
     println("")
     start_time = time() 
     
-    model, obj_val, solve_time, gap, E_toH2, E_fromH2, H_storage, η_toH2, η_fromH2, inv_η_toH2, inv_η_fromH2, re, ED, e, c_hBuy, c_hSell = SolveEPP(360);
+    model, obj_val, solve_time, gap, E_toH2, E_fromH2, H_storage, a_toH2, a_fromH2, inv_aToH2, inv_afromH2, re, ED, e, c_hBuy, c_hSell = SolveEPP(360);
     
     H_sell = value.(model[:H_sell])
     H_buy = value.(model[:H_buy])
@@ -657,8 +648,8 @@ function main(directory_name::String="Test1", file_prefix::String="default")
         "objective_value" => obj_val,
         "solve_time" => solve_time,
         "gap" => gap,
-        "avg_h2_production_efficiency" => mean(η_toH2),
-        "avg_h2_usage_efficiency" => mean(η_fromH2),
+        "avg_h2_production_efficiency" => mean(a_toH2),
+        "avg_h2_usage_efficiency" => mean(a_fromH2),
         "total_E_toH2" => sum(E_toH2),
         "total_E_fromH2" => sum(E_fromH2),
         "total_H_storage" => sum(H_storage),
@@ -675,13 +666,13 @@ function main(directory_name::String="Test1", file_prefix::String="default")
         H_storage = H_storage,
         H_sell = H_sell,
         H_buy = H_buy,
-        η_toH2 = η_toH2,
-        η_fromH2 = η_fromH2,
-        inv_η_toH2 = inv_η_toH2,
-        inv_η_fromH2 = inv_η_fromH2
+        a_toH2 = a_toH2,
+        a_fromH2 = a_fromH2,
+        inv_aToH2 = inv_aToH2,
+        inv_afromH2 = inv_afromH2
     )
 
-    results_dir = "FinalPräsentation/$(directory_name)"
+    results_dir = "Lösungsansatz/$(directory_name)"
     mkpath(results_dir)
     timestamp = Dates.format(Dates.now(), "yyyy-mm-dd_HH-MM-SS")
     summary_file = "$(results_dir)/$(file_prefix)_summary_$(timestamp).txt"
@@ -696,8 +687,8 @@ function main(directory_name::String="Test1", file_prefix::String="default")
         println(io, "Solve time: ", results["solve_time"], " seconds")
         println(io, "Relative gap: ", results["gap"])
         println(io, "\nEFFICIENCY METRICS:")
-        println(io, "H2 production efficiencies by period: ", η_toH2)
-        println(io, "H2 usage efficiencies by period: ", η_fromH2)
+        println(io, "H2 production efficiencies by period: ", a_toH2)
+        println(io, "H2 usage efficiencies by period: ", a_toH2)
         println(io, "\nPERIOD-BY-PERIOD VALUES:")
         println(io, "\n" * "#"^200)  
         @printf(io, "%-6s | %12s | %12s | %12s | %12s | %12s | %12s | %12s | %12s | %12s | %12s | %12s\n", 
@@ -785,7 +776,7 @@ end
 
 # wenn man die datai ausführt soll main ausgeführt werden
 if abspath(PROGRAM_FILE) == @__FILE__
-    main("Frage_2_1", "hoherWirkungsgrad")
+    main("Extra", "sehr_groß")
 end
 
 #main("MyDirectory", "MyTest"); # Uncomment and modify to run with custom names
