@@ -159,7 +159,7 @@ function SolveEPP(time_limit::Int64)
     ############################################
     ### Hydrogen fuel cell 
     ############################################
-    H_max = 1000;                # kg H2 Speicherkapazität -> ~33333 kWh
+    H_max = 100;                # kg H2 Speicherkapazität -> ~33333 kWh
     H_storage_initial = 0;       # kg H2 Anfangsbestand
     H_storage_end = 0;           # kg H2 Endbestand     
     H_Max_charge_rate = 100;     # kW max Elektrolyse-Leistung    
@@ -169,23 +169,30 @@ function SolveEPP(time_limit::Int64)
 
 
     #euro/kg wasserstoffpreise
-    c_hBuy  = [7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0]
-    c_hSell = [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]
-    #c_hBuy  = [5.0, 4.5, 4.0, 4.0, 4.5, 6.0, 7.5, 8.0, 7.5, 6.5, 6.0, 6.5, 7.0, 6.5, 6.0, 6.0, 6.5, 7.0, 8.0, 7.5, 6.5, 6.0, 5.5, 5.0]
-    #c_hSell = [3.0, 2.7, 2.4, 2.4, 2.7, 3.6, 4.5, 4.8, 4.5, 3.9, 3.6, 3.9, 4.2, 3.9, 3.6, 3.6, 3.9, 4.2, 4.8, 4.5, 3.9, 3.6, 3.3, 3.0]
+    #c_hBuy  = [7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0]
+    #c_hSell = [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]
+    c_hBuy  = [5.0, 4.5, 4.0, 4.0, 4.5, 6.0, 7.5, 8.0, 7.5, 6.5, 6.0, 6.5, 7.0, 6.5, 6.0, 6.0, 6.5, 7.0, 8.0, 7.5, 6.5, 6.0, 5.5, 5.0]
+    c_hSell = [3.0, 2.7, 2.4, 2.4, 2.7, 3.6, 4.5, 4.8, 4.5, 3.9, 3.6, 3.9, 4.2, 3.9, 3.6, 3.6, 3.9, 4.2, 4.8, 4.5, 3.9, 3.6, 3.3, 3.0]
 
     #lagerkosten 20-750 $ per kg H2
-    c_H_storage = 500 #5
+    c_H_storage = 0.1 #5
 
     c_h2charge  = 0.1      # €/kWh cost of charging
     c_h2discharge = 0.1    # €/kWh cost of charging
 
     H_heizwert = 1/3; # kg/kwh //  33.33 kwh/kg
     
+
     
     leistung_punkte              = [0,   10,    20,    30,    40,    50,   60,    70,   80,   90,   100]   # kW (Leistung)
     wirkungsgrad_punkte_toH2     = [0, 0.95,  0.90,  0.88,  0.85,  0.82, 0.80,  0.78, 0.75, 0.72,  0.70]   # toH2
     wirkungsgrad_punkte_fromH2   = [0,  0.6,  0.58,  0.55,  0.52,  0.50, 0.48,  0.45, 0.43,  0.4,   0.3]   # fromH2
+
+
+    #höher 
+    #leistung_punkte              = [0,   10,    20,    30,    40,    50,   60,    70,   80,   90,   100]
+    #wirkungsgrad_punkte_toH2     = [0, 1.00,  0.95,  0.93,  0.90,  0.87, 0.85,  0.83, 0.80, 0.77,  0.75]
+    #wirkungsgrad_punkte_fromH2   = [0, 0.90,  0.88,  0.85,  0.82,  0.80, 0.78,  0.75, 0.73, 0.70,  0.60]
 
     function safe_inverse(x)
         return x == 0 ? 1000.0 : 1/x  
@@ -775,7 +782,7 @@ end
 
 # wenn man die datai ausführt soll main ausgeführt werden
 if abspath(PROGRAM_FILE) == @__FILE__
-    main("Frage_3", "500_XX_euro")
+    main("Frage_4", "100_optimal")
 end
 
 #main("MyDirectory", "MyTest"); # Uncomment and modify to run with custom names
