@@ -181,13 +181,10 @@ function SolveEPP(time_limit::Int64)
 
     H_heizwert = 1/33.33333; # kg/kwh //  33.33 kwh/kg
     
-    
-    # leistung_punkte              = [0,   10,    20,    30,    40,    50,   60,    70,   80,   90,   100]   # kW (Leistung)
-    # wirkungsgrad_punkte_toH2     = [0, 0.95,  0.90,  0.88,  0.85,  0.82, 0.80,  0.78, 0.75, 0.72,  0.70]   # toH2
-    # wirkungsgrad_punkte_fromH2   = [0,  0.6,  0.58,  0.55,  0.52,  0.50, 0.48,  0.45, 0.43,  0.4,   0.3]   # fromH2
-    leistung_punkte              = [0,   10,    20,    30,    40,    50,   60,    70,   80,   90,   100]
-    wirkungsgrad_punkte_toH2     = [0, 1.00,  0.95,  0.93,  0.90,  0.87, 0.85,  0.83, 0.80, 0.77,  0.75]
-    wirkungsgrad_punkte_fromH2   = [0, 0.90,  0.88,  0.85,  0.82,  0.80, 0.78,  0.75, 0.73, 0.70,  0.60]
+
+    leistung_punkte              = [0,   10,    20,    30,    40,    50,   60,    70,   80,   90,   100]   # kW (Leistung)
+    wirkungsgrad_punkte_toH2     = [0, 0.95,  0.90,  0.88,  0.85,  0.82, 0.80,  0.78, 0.75, 0.72,  0.70]   # toH2
+    wirkungsgrad_punkte_fromH2   = [0,  0.6,  0.58,  0.55,  0.52,  0.50, 0.48,  0.45, 0.43,  0.4,   0.3]   # fromH2
     
 
     function safe_inverse(x)
@@ -271,9 +268,6 @@ function SolveEPP(time_limit::Int64)
         sum(alpha[m,p,s]*e[m,s] for m=1:M, s=1:S) + E_sell[p] + E_charge[p] + E_toH2[p] == 
         E_buy[p] + re[p] + E_discharge[p] + E_fromH2[p])
 
-    # @constraint(EPP, [p=1:P], inv_η_toH2[p] == sum(λ_toH2[p,i] * wirkungsgrad_punkte_toH2_inv[i] for i in eachindex(leistung_punkte)))
-    # @constraint(EPP, [p=1:P], inv_η_fromH2[p] == sum(λ_fromH2[p,i] * wirkungsgrad_punkte_fromH2_inv[i] for i in eachindex(leistung_punkte)))
-    
     # Constraints for H2 purchase limitation
     # If z_buy[p] = 0, no purchase allowed in period p
     @constraint(EPP, [p=1:P], H_buy[p] <= H_max * z_buy[p]) 
@@ -785,7 +779,7 @@ end
 
 # wenn man die datai ausführt soll main ausgeführt werden
 if abspath(PROGRAM_FILE) == @__FILE__
-    main("Frage_2_1", "hoherWirkungsgrad")
+    main("Frage_Storage", "nocostnoInit_no_end")
 end
 
 #main("MyDirectory", "MyTest"); # Uncomment and modify to run with custom names
