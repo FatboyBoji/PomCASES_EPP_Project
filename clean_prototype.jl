@@ -58,20 +58,20 @@ function SolveEPP(time_limit::Int64)
     re = [0, 0, 0, 20, 30, 40, 40, 50, 70, 80, 90, 80, 100, 70, 70, 60, 50, 30, 30, 10, 10, 0, 0, 0];
 
     # Battery-related parameters (inactive by default)
-    Max_charge_rate     = 0 #100 #40
-    Max_discharge_rate  = 0 #100 #40
-    Bat_cap             = 0 #300 #300
-    Bat_SoC_initial     = 0 #150 #150
-    Bat_SoC_end         = 0 #150 #150
+    Max_charge_rate     = 0 #100 
+    Max_discharge_rate  = 0 #100
+    Bat_cap             = 0 #300
+    Bat_SoC_initial     = 0 #50 
+    Bat_SoC_end         = 0 #50 
 
     # Add cost parameters
     c_charge = 1.0;    # €/kWh cost of charging
     c_discharge = 0.5; # €/kWh cost of discharging
 
     # Battery efficiency parameters
-    eta_charge = 0;    # Charging efficiency
-    eta_discharge = 0; # Discharging efficiency
-    Bat_autodischarge_rate = 0;  # Self-discharge rate per period
+    eta_charge =  0.95;    # Charging efficiency
+    eta_discharge = 0.95; # Discharging efficiency
+    Bat_autodischarge_rate = 0.002;  # Self-discharge rate per period
 
     ###############  Decision variables   ###############
     #Scheduling
@@ -130,7 +130,7 @@ function SolveEPP(time_limit::Int64)
     @constraint(EPP, [m=1:M, p=P:P], 
         alpha[m,p,1] == 1); 
 
-    # (12) energy balance
+    # # (12) energy balance
     # @constraint(EPP, [p=1:P], 
     #     sum(alpha[m,p,s]*e[m,s] for m=1:M, s=1:S) + E_sell[p] + E_charge[p] == E_buy[p] + re[p] + E_discharge[p]);  
 
@@ -144,13 +144,17 @@ function SolveEPP(time_limit::Int64)
 
     # (16) Battery state of charge 
     @constraint(EPP, [p=1:1], # first period
-        Bat_SoC[p]==Bat_SoC_initial+E_charge[p]-E_discharge[p]);
+        Bat_SoC[p] == Bat_SoC_initial*(1-Bat_autodischarge_rate) + 
+        eta_charge*E_charge[p] - E_discharge[p]/eta_discharge);
 
     @constraint(EPP, [p=2:P], # all other periods
-        Bat_SoC[p]==Bat_SoC[p-1]+E_charge[p]-E_discharge[p]);
+        Bat_SoC[p] == Bat_SoC[p-1]*(1-Bat_autodischarge_rate) + 
+        eta_charge*E_charge[p] - E_discharge[p]/eta_discharge);
 
     @constraint(EPP, [p=P:P], # last period
-        Bat_SoC_end==Bat_SoC[p-1]+E_charge[p]-E_discharge[p]);
+        Bat_SoC_end == Bat_SoC[p-1]*(1-Bat_autodischarge_rate) + 
+        eta_charge*E_charge[p] - E_discharge[p]/eta_discharge);
+
 
     # (17) Battery capacity 
     @constraint(EPP, [p=1:P], Bat_SoC[p]<=Bat_cap);
@@ -159,13 +163,13 @@ function SolveEPP(time_limit::Int64)
     ############################################
     ### Hydrogen fuel cell 
     ############################################
-    H_max = 1000;                # kg H2 Speicherkapazität -> ~33333 kWh 
-    H_storage_initial = 0;       # kg H2 Anfangsbestand
-    H_storage_end = 0;           # kg H2 Endbestand     
-    H_Max_charge_rate = 100;     # kW max Elektrolyse-Leistung    
-    H_Max_discharge_rate = 100;  # kW max Brennstoffzellen-Leistung
-    max_H_purchases = 1;         # Maximum number of H2 purchases allowed in one day
-    min_H_purchase_amount = 100; # Minimum amount of H2 that must be purchased when making a purchase (kg)
+    H_max = 9.0;                  # kg H2 Speicherkapazität -> ~33333 kWh 
+    H_storage_initial = 4.5;       # kg H2 Anfangsbestand
+    H_storage_end = 4.5;           # kg H2 Endbestand     
+    H_Max_charge_rate = 100;       # kW max Elektrolyse-Leistung    
+    H_Max_discharge_rate = 100;    # kW max Brennstoffzellen-Leistung
+    max_H_purchases = 24;          # Maximum number of H2 purchases allowed in one day
+    min_H_purchase_amount = 0.01;     # Minimum amount of H2 that must be purchased when making a purchase (kg)
 
     #euro/kg wasserstoffpreise
     c_hBuy  = [7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0]
@@ -204,7 +208,7 @@ function SolveEPP(time_limit::Int64)
     @variable(EPP, H_sell[1:P] >= 0)  #kg
     @variable(EPP, z_buy[1:P], Bin)   #if H2 is purchased in period p, 0 otherwise
     
-    # SOS2 Variablen
+    # SOS2 Variablen 1/η_toH2[]
     @variable(EPP, λ_toH2[1:P, 1:length(leistung_punkte)] >= 0)
     @variable(EPP, λ_fromH2[1:P, 1:length(leistung_punkte)] >= 0)
     @variable(EPP, η_toH2[1:P] >= 0)
@@ -222,8 +226,8 @@ function SolveEPP(time_limit::Int64)
     #######################
 
     # Frage 1!
-    # @constraint(EPP, [p=1:P], H_buy[p] == 0)
-    # @constraint(EPP, [p=1:P], H_sell[p] == 0)
+    @constraint(EPP, [p=1:P], H_buy[p] == 0)
+    @constraint(EPP, [p=1:P], H_sell[p] == 0)
 
     # max constraint:
     @constraint(EPP, [p=1:P], H_storage[p] <= H_max)
@@ -286,7 +290,7 @@ function SolveEPP(time_limit::Int64)
     @objective(EPP, Min, 
         sum(c_buy[p]*E_buy[p] - c_sell[p]*E_sell[p] for p=1:P) +  
         sum(c_charge*E_charge[p] + c_discharge*E_discharge[p] for p=1:P) +  
-        sum(c_h2charge * inv_η_toH2[p] * E_toH2[p] + c_h2discharge * inv_η_fromH2[p] * E_fromH2[p] for p=1:P) +
+        sum(c_h2charge * inv_η_toH2[p] * E_toH2[p] + c_h2discharge * η_fromH2[p] * E_fromH2[p] for p=1:P) +
         sum(c_hBuy[p] * H_buy[p] - c_hSell[p] * H_sell[p] for p=1:P) +  
         sum(c_H_storage * H_storage[p] for p=1:P)  
     )
@@ -675,7 +679,7 @@ function main(directory_name::String="Test1", file_prefix::String="default")
         inv_η_fromH2 = inv_η_fromH2
     )
 
-    results_dir = "FinalPräsentation/$(directory_name)"
+    results_dir = "paper/$(directory_name)"
     mkpath(results_dir)
     timestamp = Dates.format(Dates.now(), "yyyy-mm-dd_HH-MM-SS")
     summary_file = "$(results_dir)/$(file_prefix)_summary_$(timestamp).txt"
@@ -779,7 +783,7 @@ end
 
 # wenn man die datai ausführt soll main ausgeführt werden
 if abspath(PROGRAM_FILE) == @__FILE__
-    main("Frage_Storage", "nocostnoInit_no_end")
+    main("0003_rerun", "9kg_FC_version_2")
 end
 
 #main("MyDirectory", "MyTest"); # Uncomment and modify to run with custom names
