@@ -163,6 +163,7 @@ function SolveEPP(time_limit::Int64)
     ############################################
     ### Hydrogen fuel cell 
     ############################################
+<<<<<<< Updated upstream
     H_max = 9.0;                  # kg H2 Speicherkapazität -> ~33333 kWh 
     H_storage_initial = 4.5;       # kg H2 Anfangsbestand
     H_storage_end = 4.5;           # kg H2 Endbestand     
@@ -170,12 +171,27 @@ function SolveEPP(time_limit::Int64)
     H_Max_discharge_rate = 100;    # kW max Brennstoffzellen-Leistung
     max_H_purchases = 24;          # Maximum number of H2 purchases allowed in one day
     min_H_purchase_amount = 0.01;     # Minimum amount of H2 that must be purchased when making a purchase (kg)
+=======
+    H_max = 1000;                # kg H2 Speicherkapazität -> ~33333 kWh
+    H_storage_initial = 0;       # kg H2 Anfangsbestand
+    H_storage_end = 0;           # kg H2 Endbestand     
+    H_Max_charge_rate = 100;     # kW max Elektrolyse-Leistung    
+    H_Max_discharge_rate = 100;  # kW max Brennstoffzellen-Leistung
+    max_H_purchases = 1;         # Maximum number of H2 purchases allowed in one day
+    min_H_purchase_amount = 100; # Minimum amount of H2 that must be purchased when making a purchase (kg)
+
+>>>>>>> Stashed changes
 
     #euro/kg wasserstoffpreise
     c_hBuy  = [7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0]
     c_hSell = [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]
+<<<<<<< Updated upstream
     # c_hBuy  = [5.0, 4.5, 4.0, 4.0, 4.5, 6.0, 7.5, 8.0, 7.5, 6.5, 6.0, 6.5, 7.0, 6.5, 6.0, 6.0, 6.5, 7.0, 8.0, 7.5, 6.5, 6.0, 5.5, 5.0]
     # c_hSell = [3.0, 2.7, 2.4, 2.4, 2.7, 3.6, 4.5, 4.8, 4.5, 3.9, 3.6, 3.9, 4.2, 3.9, 3.6, 3.6, 3.9, 4.2, 4.8, 4.5, 3.9, 3.6, 3.3, 3.0]
+=======
+    #c_hBuy  = [5.0, 4.5, 4.0, 4.0, 4.5, 6.0, 7.5, 8.0, 7.5, 6.5, 6.0, 6.5, 7.0, 6.5, 6.0, 6.0, 6.5, 7.0, 8.0, 7.5, 6.5, 6.0, 5.5, 5.0]
+    #c_hSell = [3.0, 2.7, 2.4, 2.4, 2.7, 3.6, 4.5, 4.8, 4.5, 3.9, 3.6, 3.9, 4.2, 3.9, 3.6, 3.6, 3.9, 4.2, 4.8, 4.5, 3.9, 3.6, 3.3, 3.0]
+>>>>>>> Stashed changes
 
     #lagerkosten 20-750 $ per kg H2
     c_H_storage = 0 #5
@@ -186,6 +202,7 @@ function SolveEPP(time_limit::Int64)
     H_heizwert = 1/33.33333; # kg/kwh //  33.33 kwh/kg
     
 
+<<<<<<< Updated upstream
     leistung_punkte              = [0,   10,    20,    30,    40,    50,   60,    70,   80,   90,   100]   # kW (Leistung)
     wirkungsgrad_punkte_toH2     = [0, 0.95,  0.90,  0.88,  0.85,  0.82, 0.80,  0.78, 0.75, 0.72,  0.70]   # toH2
     wirkungsgrad_punkte_fromH2   = [0,  0.6,  0.58,  0.55,  0.52,  0.50, 0.48,  0.45, 0.43,  0.4,   0.3]   # fromH2
@@ -193,6 +210,22 @@ function SolveEPP(time_limit::Int64)
 
     function safe_inverse(x)
         return x == 0 ? 0.0 : 1/x  
+=======
+    
+    #leistung_punkte              = [0,   10,    20,    30,    40,    50,   60,    70,   80,   90,   100]   # kW (Leistung)
+    #wirkungsgrad_punkte_toH2     = [0, 0.95,  0.90,  0.88,  0.85,  0.82, 0.80,  0.78, 0.75, 0.72,  0.70]   # toH2
+    #wirkungsgrad_punkte_fromH2   = [0,  0.6,  0.58,  0.55,  0.52,  0.50, 0.48,  0.45, 0.43,  0.4,   0.3]   # fromH2
+
+    
+
+    #höher 
+    leistung_punkte              = [0,   10,    20,    30,    40,    50,   60,    70,   80,   90,   100]
+    wirkungsgrad_punkte_toH2     = [0, 1.00,  0.95,  0.93,  0.90,  0.87, 0.85,  0.83, 0.80, 0.77,  0.75]
+    wirkungsgrad_punkte_fromH2   = [0, 0.90,  0.88,  0.85,  0.82,  0.80, 0.78,  0.75, 0.73, 0.70,  0.60]
+
+    function safe_inverse(x)
+        return x == 0 ? 0 : 1/x  
+>>>>>>> Stashed changes
     end
     wirkungsgrad_punkte_toH2_inv = [safe_inverse(x) for x in wirkungsgrad_punkte_toH2]
     wirkungsgrad_punkte_fromH2_inv = [safe_inverse(x) for x in wirkungsgrad_punkte_fromH2]
@@ -269,8 +302,8 @@ function SolveEPP(time_limit::Int64)
 
     # Energiebilanz
     @constraint(EPP, [p=1:P], 
-        sum(alpha[m,p,s]*e[m,s] for m=1:M, s=1:S) + E_sell[p] + E_charge[p] + E_toH2[p] == 
-        E_buy[p] + re[p] + E_discharge[p] + E_fromH2[p])
+        sum(alpha[m,p,s]*e[m,s] for m=1:M, s=1:S) + E_sell[p] + E_toH2[p] == 
+        E_buy[p] + re[p] + E_fromH2[p])
 
     # Constraints for H2 purchase limitation
     # If z_buy[p] = 0, no purchase allowed in period p
@@ -288,9 +321,14 @@ function SolveEPP(time_limit::Int64)
     ### Objective Function ###
     ####################### 
     @objective(EPP, Min, 
+<<<<<<< Updated upstream
         sum(c_buy[p]*E_buy[p] - c_sell[p]*E_sell[p] for p=1:P) +  
         sum(c_charge*E_charge[p] + c_discharge*E_discharge[p] for p=1:P) +  
         sum(c_h2charge * inv_η_toH2[p] * E_toH2[p] + c_h2discharge * η_fromH2[p] * E_fromH2[p] for p=1:P) +
+=======
+        sum(c_buy[p]*E_buy[p] - c_sell[p]*E_sell[p] for p=1:P) +    
+        sum(c_h2charge * inv_η_toH2[p] * E_toH2[p] + c_h2discharge * inv_η_fromH2[p] * E_fromH2[p] for p=1:P) +
+>>>>>>> Stashed changes
         sum(c_hBuy[p] * H_buy[p] - c_hSell[p] * H_sell[p] for p=1:P) +  
         sum(c_H_storage * H_storage[p] for p=1:P)  
     )
@@ -301,6 +339,7 @@ function SolveEPP(time_limit::Int64)
     #######################
 
     optimize!(EPP)
+
 
     #######################
     ### Return Results ###
@@ -783,7 +822,11 @@ end
 
 # wenn man die datai ausführt soll main ausgeführt werden
 if abspath(PROGRAM_FILE) == @__FILE__
+<<<<<<< Updated upstream
     main("0003_rerun", "9kg_FC_version_2")
+=======
+    main("Frage_7", "hoher_Wirkungsgrad")
+>>>>>>> Stashed changes
 end
 
 #main("MyDirectory", "MyTest"); # Uncomment and modify to run with custom names
