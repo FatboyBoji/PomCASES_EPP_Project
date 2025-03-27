@@ -69,8 +69,8 @@ function SolveEPP(time_limit::Int64)
     c_discharge = 0.5; # €/kWh cost of discharging
 
     # Battery efficiency parameters
-    eta_charge =  0.95;    # Charging efficiency
-    eta_discharge = 0.95; # Discharging efficiency
+    eta_charge =  0.95;              # Charging efficiency
+    eta_discharge = 0.95;            # Discharging efficiency
     Bat_autodischarge_rate = 0.002;  # Self-discharge rate per period
 
     ###############  Decision variables   ###############
@@ -163,7 +163,7 @@ function SolveEPP(time_limit::Int64)
     ############################################
     ### Hydrogen fuel cell 
     ############################################
-    H_max = 9.0;                  # kg H2 Speicherkapazität -> ~33333 kWh 
+    H_max = 9               # kg H2 Speicherkapazität -> ~33333 kWh 
     H_storage_initial = 4.5;       # kg H2 Anfangsbestand
     H_storage_end = 4.5;           # kg H2 Endbestand     
     H_Max_charge_rate = 100;       # kW max Elektrolyse-Leistung    
@@ -183,12 +183,14 @@ function SolveEPP(time_limit::Int64)
     c_h2charge  = 0.1      # €/kWh cost of charging
     c_h2discharge = 0.1    # €/kWh cost of charging
 
-    H_heizwert = 1/33.33333; # kg/kwh //  33.33 kwh/kg
+    H_heizwert = 1/33.33333; # kg/kwh //  33.33 kwh/kg   10kwh * x kg/kwh * eff = kg 
     
 
     leistung_punkte              = [0,   10,    20,    30,    40,    50,   60,    70,   80,   90,   100]   # kW (Leistung)
-    wirkungsgrad_punkte_toH2     = [0, 0.95,  0.90,  0.88,  0.85,  0.82, 0.80,  0.78, 0.75, 0.72,  0.70]   # toH2
-    wirkungsgrad_punkte_fromH2   = [0,  0.6,  0.58,  0.55,  0.52,  0.50, 0.48,  0.45, 0.43,  0.4,   0.3]   # fromH2
+    wirkungsgrad_punkte_toH2     = [0, 0.815,  0.815,  0.815,  0.815,  0.815, 0.815,  0.815, 0.815, 0.815,  0.815]   # toH2
+    wirkungsgrad_punkte_fromH2   = [0,  0.481,  0.481,  0.481,  0.481,  0.481, 0.481,  0.481, 0.481,  0.481,   0.481]   # fromH2
+    # wirkungsgrad_punkte_toH2     = [0, 0.95,  0.90,  0.88,  0.85,  0.82, 0.80,  0.78, 0.75, 0.72,  0.70]   # toH2
+    # wirkungsgrad_punkte_fromH2   = [0,  0.6,  0.58,  0.55,  0.52,  0.50, 0.48,  0.45, 0.43,  0.4,   0.3]   # fromH2
     
 
     function safe_inverse(x)
@@ -515,11 +517,11 @@ function PlotResultsStacked(;alpha, X, E_toH2, E_fromH2, H_storage, E_charge, E_
         ED[x] = sum(alpha[m,x,s]*e[m,s] for m=1:M, s=1:S)
     end
 
-    # Grid & Battery Energy Flows
-    y_grid = [E_buy -E_sell E_charge E_discharge re -ED]
+    # Grid Energy Flows (removed battery flows)
+    y_grid = [E_buy -E_sell re -ED]
     g2 = groupedbar(x, y_grid, 
-        label=["E_purchased" "E_sold" "E_charge" "E_discharge" "Erneuerbare" "Energiebedarf"],
-        color=[:magenta3 :red2 :royalblue :lightblue :limegreen :darkred],
+        label=["E_purchased" "E_sold" "Erneuerbare" "Energiebedarf"],
+        color=[:magenta3 :red2 :limegreen :darkred],
         ylabel="Energie [kWh]",
         title="",
         xlim=(0,25), xticks=nothing, xgrid=false,
@@ -539,7 +541,7 @@ function PlotResultsStacked(;alpha, X, E_toH2, E_fromH2, H_storage, E_charge, E_
         tick_direction=:out)
 
     # H2 System Energy Flows
-    y_h2 = [-E_toH2 E_fromH2]
+    y_h2 = [E_toH2 -E_fromH2]
     g3 = groupedbar(x, y_h2,
         label=["Elektrolyse" "Brennstoffzelle"],
         color=[:navy :skyblue],
@@ -561,8 +563,31 @@ function PlotResultsStacked(;alpha, X, E_toH2, E_fromH2, H_storage, E_charge, E_
         foreground_color_border=nothing,
         tick_direction=:out)
 
+    # Battery Energy Flows - Fixed
+    y_h3 = [-E_discharge E_charge]
+    g4 = groupedbar(x, y_h3,
+        label=["Batterie Entladung" "Batterie Ladung"],
+        color=[:orange :yellow],
+        ylabel="Energie [kWh]",
+        title="",
+        xlim=(0,25), xticks=nothing, xgrid=false,
+        yticks=-100:50:100,
+        left_margin=left_margin,
+        right_margin=right_margin,
+        bottom_margin=-25Plots.mm,  # More negative margin
+        top_margin=-25Plots.mm,     # More negative margin
+        size=(1000,plot_height),
+        legend=:right,
+        legend_font_pointsize=6,
+        framestyle=:box,
+        grid=false,
+        showaxis=:l,  # Only show left axis
+        foreground_color_axis=nothing,
+        foreground_color_border=nothing,
+        tick_direction=:out)
+
     # H2 Trading
-    g4 = groupedbar(x, [H_buy -H_sell], 
+    g5 = groupedbar(x, [H_buy -H_sell], 
         label=["H₂ Einkauf" "H₂ Verkauf"],
         color=[:green :red],
         ylabel="H₂ [kg]",
@@ -583,7 +608,7 @@ function PlotResultsStacked(;alpha, X, E_toH2, E_fromH2, H_storage, E_charge, E_
         tick_direction=:out)
 
     # H2 Storage and Prices (bottom plot - keep x-axis labels)
-    g5 = plot(x, H_storage, 
+    g6 = plot(x, H_storage, 
         label="H₂ Speicherstand",
         ylabel="H₂ [kg]", 
         xlabel="Periods",  # Add x-axis label only to bottom plot
@@ -618,9 +643,9 @@ function PlotResultsStacked(;alpha, X, E_toH2, E_fromH2, H_storage, E_charge, E_
         tick_direction=:out)
 
     # Combine all plots with zero spacing
-    plot(g1, g2, g3, g4, g5,
-        layout=grid(5, 1, heights=[0.3, 0.175, 0.175, 0.175, 0.175]), 
-        size=(1200,1500),
+    plot(g1, g2, g3, g4, g5, g6,
+        layout=grid(6, 1, heights=[0.3, 0.14, 0.14, 0.14, 0.14, 0.14]), 
+        size=(1200,1600),
         plot_title="Energy System Operation Schedule",
         plot_titlefontsize=14,
         plot_titlelocation=:center,
@@ -783,9 +808,14 @@ end
 
 # wenn man die datai ausführt soll main ausgeführt werden
 if abspath(PROGRAM_FILE) == @__FILE__
-    main("0003_rerun", "9kg_FC_version_2")
+    main("0003_rerun", "TEST_const_EFFIZienz")
 end
 
 #main("MyDirectory", "MyTest"); # Uncomment and modify to run with custom names
 
 # day1-
+
+# x = [0,  0.6,  0.58,  0.55,  0.52,  0.50, 0.48,  0.45, 0.43,  0.4,   0.3] 
+
+# for i in x:
+    
